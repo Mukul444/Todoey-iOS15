@@ -12,12 +12,17 @@ class TodoListViewController: UITableViewController {
     
     
     //MARK: IBOutlets
-    var itemArray : [String] = ["apple","banana","cherry"]
-    
+    let item1 = Item(taskName: "apple", isCompleted: false)
+    let item2 = Item(taskName: "banana", isCompleted: false)
+    let item3 = Item(taskName: "cherry", isCompleted: false)
+    var itemArray : [Item] = []
+    let filePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     
     //MARK: viewDidLad
     override func viewDidLoad() {
         super.viewDidLoad()
+       // itemArray = [item1,item2,item3,]
+        getData()
     }
     
     
@@ -29,20 +34,18 @@ class TodoListViewController: UITableViewController {
     //MARK:  cellForRowAt
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: K.toDoItemCell.rawValue, for: indexPath)
-        cell.textLabel?.text = itemArray[indexPath.row]
+        let task = itemArray[indexPath.row]
+        cell.textLabel?.text = task.taskName
+        cell.accessoryType = task.isCompleted ? .checkmark : .none
         return cell
     }
     
     //MARK: - Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(itemArray[indexPath.row])
-        
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark{
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        }else{
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }
+        itemArray[indexPath.row].isCompleted = !itemArray[indexPath.row].isCompleted
+        self.saveData()
         tableView.deselectRow(at: indexPath, animated: true)
+        tableView.reloadData()
     }
 }
 
@@ -57,16 +60,41 @@ extension TodoListViewController{
         }
         let alertAction = UIAlertAction(title: K.add.rawValue, style: .cancel) { action in
             //print("success")
-            let item = controller.textFields?[0].text ?? ""
-            if  !item.isEmpty {
+            let taskName = controller.textFields?[0].text ?? ""
+            if  !taskName.isEmpty {
+                let item = Item(taskName: taskName, isCompleted: false)
                 self.itemArray.append(item)
-                self.tableView.reloadData()
+                self.saveData()
             }
         }
         controller.addAction(alertAction)
         self.present(controller, animated: true)
     }
     
+    func saveData(){
+        let encoder = PropertyListEncoder()
+        do {
+            let data = try encoder.encode(self.itemArray)
+            try data.write(to: self.filePath!)
+        } catch let error {
+            print(error)
+        }
+        self.tableView.reloadData()
+    }
+    
+    func getData(){
+        let decoder = PropertyListDecoder()
+        do {
+            let data = try Data(contentsOf: filePath ?? URL(fileURLWithPath: ""))
+            let dataItemArray = try decoder.decode([Item].self, from: data)
+            itemArray = dataItemArray
+        } catch let error {
+            print(error)
+        }
+        self.tableView.reloadData()
+    }
+    
 }
+
 
 
